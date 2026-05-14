@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GradleMigrationSettings" migrationVersion="1" />
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2" />
+        <option name="gradleJvm" value="#JAVA_HOME" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/SPD-classes" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/android" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/core" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/desktop" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/ios" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/services" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/services/news" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/services/news/debugNews" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/services/news/shatteredNews" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/services/updates" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/services/updates/debugUpdates" />
+            <option value="$PROJECT_DIR$/shattered-pixel-dungeon-3.0.2/services/updates/githubUpdates" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+    </option>
+  </component>
+</project>
