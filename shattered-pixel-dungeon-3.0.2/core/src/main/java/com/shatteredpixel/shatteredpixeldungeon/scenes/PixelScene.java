@@ -5,7 +5,7 @@
  * Shattered Pixel Dungeon
  * Copyright (C) 2014-2024 Evan Debenham
  *
- * This program is free software: you can redistribute it and/or modify
+ * This  program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
@@ -55,6 +55,14 @@ import com.watabou.utils.GameMath;
 import com.watabou.utils.PointF;
 import com.watabou.utils.Reflection;
 import com.watabou.utils.Signal;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.PixmapIO;
+import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.Input;
+import com.shatteredpixel.shatteredpixeldungeon.Assets;
+import java.lang.Runnable;
+import java.lang.Thread;
 
 import java.util.ArrayList;
 
@@ -143,10 +151,10 @@ public class PixelScene extends Scene {
 
 		// 3x5 (6)
 		pixelFont = Font.colorMarked(
-			TextureCache.get( Assets.Fonts.PIXELFONT), 0x00000000, BitmapText.Font.LATIN_FULL );
+				TextureCache.get( Assets.Fonts.PIXELFONT), 0x00000000, BitmapText.Font.LATIN_FULL );
 		pixelFont.baseLine = 6;
 		pixelFont.tracking = -1;
-		
+
 		//set up the texture size which rendered text will use for any new glyphs.
 		int renderedTextPageSize;
 		if (defaultZoom <= 3){
@@ -181,6 +189,12 @@ public class PixelScene extends Scene {
 
 				@Override
 				public boolean onSignal(KeyEvent keyEvent) {
+
+
+					if (keyEvent.pressed && keyEvent.code == Input.Keys.F12) {
+						captureScreenshot();
+						return true; // Mark event as handled
+					}
 
 					//we don't use keybindings for these as we want the user to be able to
 					// bind these keys to other actions when pressed individually
@@ -276,7 +290,7 @@ public class PixelScene extends Scene {
 	//this system only preserves windows with a public zero-arg constructor
 	private static ArrayList<Class<?extends Window>> savedWindows = new ArrayList<>();
 	private static Class<?extends PixelScene> savedClass = null;
-	
+
 	public synchronized void saveWindows(){
 		if (members == null) return;
 
@@ -288,7 +302,7 @@ public class PixelScene extends Scene {
 			}
 		}
 	}
-	
+
 	public synchronized void restoreWindows(){
 		if (getClass().equals(savedClass)){
 			for (Class<?extends Window> w : savedWindows){
@@ -359,11 +373,11 @@ public class PixelScene extends Scene {
 			fadeIn( 0xFF000000, false );
 		}
 	}
-	
+
 	protected void fadeIn( int color, boolean light ) {
 		add( new Fader( color, light ) );
 	}
-	
+
 	public static void showBadge( Badges.Badge badge ) {
 		Game.runOnRenderThread(new Callback() {
 			@Override
@@ -391,29 +405,29 @@ public class PixelScene extends Scene {
 			}
 		});
 	}
-	
+
 	public static void shake( float magnitude, float duration){
 		magnitude *= SPDSettings.screenShake();
 		Camera.main.shake(magnitude, duration);
 	}
-	
+
 	protected static class Fader extends ColorBlock {
-		
+
 		private static float FADE_TIME = 1f;
-		
+
 		private boolean light;
-		
+
 		private float time;
 
 		private static Fader INSTANCE;
-		
+
 		public Fader( int color, boolean light ) {
 			super( uiCamera.width, uiCamera.height, color );
-			
+
 			this.light = light;
-			
+
 			camera = uiCamera;
-			
+
 			alpha( 1f );
 			time = FADE_TIME;
 
@@ -422,12 +436,12 @@ public class PixelScene extends Scene {
 			}
 			INSTANCE = this;
 		}
-		
+
 		@Override
 		public void update() {
-			
+
 			super.update();
-			
+
 			if ((time -= Game.elapsed) <= 0) {
 				alpha( 0f );
 				parent.remove( this );
@@ -439,7 +453,7 @@ public class PixelScene extends Scene {
 				alpha( time / FADE_TIME );
 			}
 		}
-		
+
 		@Override
 		public void draw() {
 			if (light) {
@@ -451,29 +465,64 @@ public class PixelScene extends Scene {
 			}
 		}
 	}
-	
+
 	private static class PixelCamera extends Camera {
-		
+
 		public PixelCamera( float zoom ) {
 			super(
-				(int)(Game.width - Math.ceil( Game.width / zoom ) * zoom) / 2,
-				(int)(Game.height - Math.ceil( Game.height / zoom ) * zoom) / 2,
-				(int)Math.ceil( Game.width / zoom ),
-				(int)Math.ceil( Game.height / zoom ), zoom );
+					(int)(Game.width - Math.ceil( Game.width / zoom ) * zoom) / 2,
+					(int)(Game.height - Math.ceil( Game.height / zoom ) * zoom) / 2,
+					(int)Math.ceil( Game.width / zoom ),
+					(int)Math.ceil( Game.height / zoom ), zoom );
 			fullScreen = true;
 		}
-		
+
 		@Override
 		protected void updateMatrix() {
 			float sx = align( this, scroll.x + shakeX );
 			float sy = align( this, scroll.y + shakeY );
-			
+
 			matrix[0] = +zoom * invW2;
 			matrix[5] = -zoom * invH2;
-			
+
 			matrix[12] = -1 + x * invW2 - sx * matrix[0];
 			matrix[13] = +1 - y * invH2 - sy * matrix[5];
-			
+
 		}
+	}
+
+	private void captureScreenshot() {
+		// Capture pixels IMMEDIATELY on the render thread
+		final byte[] pixels = com.badlogic.gdx.utils.ScreenUtils.getFrameBufferPixels(
+				0, 0,
+				com.badlogic.gdx.Gdx.graphics.getBackBufferWidth(),
+				com.badlogic.gdx.Gdx.graphics.getBackBufferHeight(),
+				true);
+
+		final int w = com.badlogic.gdx.Gdx.graphics.getBackBufferWidth();
+		final int h = com.badlogic.gdx.Gdx.graphics.getBackBufferHeight();
+
+		// Offload the heavy saving work to a background thread
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				// Prepare the Pixmap inside the thread
+				com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(w, h, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+				pixmap.getPixels().put(pixels);
+				pixmap.getPixels().flip();
+
+				String dir = "screenshots/";
+				com.badlogic.gdx.Gdx.files.local(dir).mkdirs();
+				String fileName = dir + "screenshot_" + System.currentTimeMillis() + ".png";
+
+				try {
+					com.badlogic.gdx.graphics.PixmapIO.writePNG(com.badlogic.gdx.Gdx.files.local(fileName), pixmap);
+
+				} finally {
+					// disposing to prevent memory leaks
+					pixmap.dispose();
+				}
+			}
+		}).start();
 	}
 }
