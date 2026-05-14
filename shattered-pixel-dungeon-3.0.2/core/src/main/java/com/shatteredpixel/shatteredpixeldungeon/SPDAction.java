@@ -3,7 +3,7 @@
  * Copyright (C) 2012-2015 Oleg Dolya
  *
  * Shattered Pixel Dungeon
- * Copyright (C) 2014-2024 Evan Debenham
+ * Copyright (C) 2014-2026 Evan Debenham
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,6 +88,7 @@ public class SPDAction extends GameAction {
 	public static final GameAction JOURNAL      = new SPDAction("journal");
 
 	public static final GameAction ZOOM_IN      = new SPDAction("zoom_in");
+	public static final GameAction SCREENSHOT	= new SPDAction("screenshot");
 	public static final GameAction ZOOM_OUT     = new SPDAction("zoom_out");
 
 	private static final LinkedHashMap<Integer, GameAction> defaultBindings = new LinkedHashMap<>();
@@ -130,6 +131,7 @@ public class SPDAction extends GameAction {
 		defaultBindings.put( Input.Keys.F3,             SPDAction.BAG_3 );
 		defaultBindings.put( Input.Keys.F4,             SPDAction.BAG_4 );
 		defaultBindings.put( Input.Keys.F5,             SPDAction.BAG_5 );
+		defaultBindings.put( Input.Keys.F12, 			SPDAction.SCREENSHOT);
 
 		defaultBindings.put( Input.Keys.E,              SPDAction.EXAMINE );
 		defaultBindings.put( Input.Keys.Z,              SPDAction.REST );
