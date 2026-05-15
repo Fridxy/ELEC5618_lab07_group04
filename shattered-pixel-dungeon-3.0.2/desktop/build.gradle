@@ -1,6 +1,7 @@
 plugins {
     id 'org.beryx.runtime' version '1.12.7'
 }
+
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 sourceCompatibility = targetCompatibility = appJavaCompatibility
 
