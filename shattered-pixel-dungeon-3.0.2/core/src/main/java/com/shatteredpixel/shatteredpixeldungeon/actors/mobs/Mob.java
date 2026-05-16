@@ -89,6 +89,7 @@ import com.shatteredpixel.shatteredpixeldungeon.plants.Swiftthistle;
 import com.shatteredpixel.shatteredpixeldungeon.scenes.GameScene;
 import com.shatteredpixel.shatteredpixeldungeon.sprites.CharSprite;
 import com.shatteredpixel.shatteredpixeldungeon.utils.GLog;
+import com.shatteredpixel.shatteredpixeldungeon.utils.MobLogger;
 import com.watabou.noosa.audio.Sample;
 import com.watabou.utils.Bundle;
 import com.watabou.utils.PathFinder;
@@ -139,7 +140,21 @@ public abstract class Mob extends Char {
 			HT = Math.round(HT * AscensionChallenge.statModifier(this));
 			HP = Math.round(HT * percent);
 			firstAdded = false;
+			MobLogger.logSpawn(id(), getClass().getSimpleName(), Dungeon.depth, Dungeon.seed, pos);
 		}
+	}
+
+	private String stateTag(AiState s) {
+		if (s == SLEEPING)  return Sleeping.TAG;
+		if (s == WANDERING) return Wandering.TAG;
+		if (s == HUNTING)   return Hunting.TAG;
+		if (s == FLEEING)   return Fleeing.TAG;
+		if (s == PASSIVE)   return Passive.TAG;
+		return "UNKNOWN";
+	}
+
+	protected String stateTag() {
+		return stateTag(state);
 	}
 
 	private static final String STATE	= "state";
@@ -217,19 +232,23 @@ public abstract class Mob extends Char {
 	
 	@Override
 	protected boolean act() {
-		
+
 		super.act();
-		
+
+		// capture before-values for logging at end of turn
+		AiState stateBeforeAct = state;
+		int targetBeforeAct = target;
+
 		boolean justAlerted = alerted;
 		alerted = false;
-		
+
 		if (justAlerted){
 			sprite.showAlert();
 		} else {
 			sprite.hideAlert();
 			sprite.hideLost();
 		}
-		
+
 		if (paralysed > 0) {
 			enemySeen = false;
 			spend( TICK );
@@ -239,9 +258,9 @@ public abstract class Mob extends Char {
 		if (buff(Terror.class) != null || buff(Dread.class) != null ){
 			state = FLEEING;
 		}
-		
+
 		enemy = chooseEnemy();
-		
+
 		boolean enemyInFOV = enemy != null && enemy.isAlive() && fieldOfView[enemy.pos] && enemy.invisible <= 0;
 
 		//prevents action, but still updates enemy seen status
@@ -257,6 +276,19 @@ public abstract class Mob extends Char {
 		if (buff(PowerOfMany.PowerBuff.class) != null){
 			Dungeon.level.updateFieldOfView( this, fieldOfView );
 			GameScene.updateFog(pos, viewDistance+(int)Math.ceil(speed()));
+		}
+
+		// emit logging events for changes that occurred this turn
+		if (justAlerted) {
+			MobLogger.logAlerted(id(), getClass().getSimpleName(), Dungeon.depth, pos);
+		}
+		if (state != stateBeforeAct) {
+			MobLogger.logStateTransition(id(), getClass().getSimpleName(), Dungeon.depth,
+					stateTag(stateBeforeAct), stateTag());
+		}
+		if (target != targetBeforeAct) {
+			MobLogger.logTargetChange(id(), getClass().getSimpleName(), Dungeon.depth,
+					targetBeforeAct, target);
 		}
 
 		return result;

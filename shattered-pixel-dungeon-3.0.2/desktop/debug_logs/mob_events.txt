@@ -1,0 +1,12 @@
+[2026-05-16 21:35:59.406] SPAWN      | id=5    type=Snake              depth=1   seed=5427014271387   pos=724
+[2026-05-16 21:35:59.407] SPAWN      | id=6    type=Albino             depth=1   seed=5427014271387   pos=329
+[2026-05-16 21:35:59.407] SPAWN      | id=7    type=Snake              depth=1   seed=5427014271387   pos=692
+[2026-05-16 21:35:59.408] SPAWN      | id=8    type=Rat                depth=1   seed=5427014271387   pos=188
+[2026-05-16 21:35:59.408] SPAWN      | id=9    type=Rat                depth=1   seed=5427014271387   pos=252
+[2026-05-16 21:35:59.408] SPAWN      | id=10   type=Rat                depth=1   seed=5427014271387   pos=257
+[2026-05-16 21:35:59.408] SPAWN      | id=11   type=Rat                depth=1   seed=5427014271387   pos=251
+[2026-05-16 21:35:59.408] SPAWN      | id=12   type=Rat                depth=1   seed=5427014271387   pos=342
+[2026-05-16 21:36:37.038] STATE      | id=6    type=Albino             depth=1   SLEEPING -> HUNTING
+[2026-05-16 21:36:37.039] TARGET     | id=6    type=Albino             depth=1   target: -1 -> 428
+[2026-05-16 21:36:37.792] TARGET     | id=6    type=Albino             depth=1   target: 428 -> 394
+[2026-05-16 21:36:37.895] TARGET     | id=6    type=Albino             depth=1   target: 394 -> 361
