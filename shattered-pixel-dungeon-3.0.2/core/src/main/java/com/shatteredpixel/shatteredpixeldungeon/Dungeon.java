@@ -212,6 +212,9 @@ public class Dungeon {
 	public static long seed;
 	public static long lastPlayed;
 
+	/** Set to true when loadGame() successfully recovered state from a backup save. */
+	public static boolean saveLoadedFromBackup = false;
+
 	//we initialize the seed separately so that things like interlevelscene can access it early
 	public static void initSeed(){
 		if (daily) {
@@ -682,7 +685,17 @@ public class Dungeon {
 			bundle.put( BADGES, badges );
 			
 			FileUtils.bundleToFile( GamesInProgress.gameFile(save), bundle);
-			
+
+			// Write a backup immediately after every successful primary save so
+			// loadGame() has something to recover from if the primary is later corrupted.
+			try {
+				FileUtils.bundleToFile( GamesInProgress.backupFile(save), bundle );
+			} catch (IOException backupEx) {
+				// Non-fatal — primary save succeeded; log and continue.
+				ShatteredPixelDungeon.reportException(
+						new RuntimeException("[SaveBackup] Failed to write backup for slot " + save, backupEx));
+			}
+
 		} catch (IOException e) {
 			GamesInProgress.setUnknown( save );
 			ShatteredPixelDungeon.reportException(e);
@@ -714,8 +727,42 @@ public class Dungeon {
 	}
 	
 	public static void loadGame( int save, boolean fullLoad ) throws IOException {
-		
-		Bundle bundle = FileUtils.bundleFromFile( GamesInProgress.gameFile( save ) );
+
+		saveLoadedFromBackup = false;
+
+		// --- Load and validate the primary save, fall back to backup on failure ---
+		Bundle bundle;
+		try {
+			bundle = FileUtils.bundleFromFile( GamesInProgress.gameFile( save ) );
+			SaveValidator.ValidationResult primaryResult = SaveValidator.validateGameBundle( bundle );
+			if (!primaryResult.isValid) {
+				throw new IOException( "Primary save failed validation: " + primaryResult.issues );
+			}
+		} catch (IOException primaryEx) {
+			ShatteredPixelDungeon.reportException(
+					new RuntimeException( "[SaveRecovery] Primary save invalid for slot " + save
+							+ " — attempting backup. Reason: " + primaryEx.getMessage(), primaryEx ));
+
+			if (!GamesInProgress.backupExists( save )) {
+				throw new IOException( "Save data is corrupted and no backup exists for slot " + save );
+			}
+
+			try {
+				bundle = FileUtils.bundleFromFile( GamesInProgress.backupFile( save ) );
+				SaveValidator.ValidationResult backupResult = SaveValidator.validateGameBundle( bundle );
+				if (!backupResult.isValid) {
+					throw new IOException( "Backup save also failed validation: " + backupResult.issues );
+				}
+				ShatteredPixelDungeon.reportException(
+						new RuntimeException( "[SaveRecovery] Successfully recovered slot " + save + " from backup" ));
+				saveLoadedFromBackup = true;
+			} catch (IOException backupEx) {
+				ShatteredPixelDungeon.reportException(
+						new RuntimeException( "[SaveRecovery] Both primary and backup are corrupt for slot " + save, backupEx ));
+				throw new IOException( "Save data is corrupted and backup recovery failed for slot " + save );
+			}
+		}
+		// -------------------------------------------------------------------------
 
 		initialVersion = bundle.getInt( INIT_VER );
 		version = bundle.getInt( VERSION );
@@ -817,15 +864,31 @@ public class Dungeon {
 	}
 	
 	public static Level loadLevel( int save ) throws IOException {
-		
+
 		Dungeon.level = null;
 		Actor.clear();
 
-		Bundle bundle = FileUtils.bundleFromFile( GamesInProgress.depthFile( save, depth, branch ));
+		Bundle bundle;
+		try {
+			bundle = FileUtils.bundleFromFile( GamesInProgress.depthFile( save, depth, branch ) );
+			SaveValidator.ValidationResult result = SaveValidator.validateLevelBundle( bundle );
+			if (!result.isValid) {
+				throw new IOException( "Level data corrupted for depth=" + depth + " branch=" + branch
+						+ ": " + result.issues );
+			}
+		} catch (IOException e) {
+			ShatteredPixelDungeon.reportException(
+					new RuntimeException( "[SaveRecovery] Level file invalid for depth=" + depth
+							+ " branch=" + branch + ": " + e.getMessage(), e ));
+			throw e;
+		}
 
 		Level level = (Level)bundle.get( LEVEL );
 
 		if (level == null){
+			ShatteredPixelDungeon.reportException(
+					new RuntimeException( "[SaveRecovery] Level deserialized as null for depth=" + depth
+							+ " branch=" + branch ));
 			throw new IOException();
 		} else {
 			return level;
