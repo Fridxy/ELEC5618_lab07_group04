@@ -24,6 +24,7 @@ package com.shatteredpixel.shatteredpixeldungeon;
 import com.shatteredpixel.shatteredpixeldungeon.actors.hero.HeroClass;
 import com.shatteredpixel.shatteredpixeldungeon.actors.hero.HeroSubClass;
 import com.shatteredpixel.shatteredpixeldungeon.messages.Messages;
+import com.watabou.noosa.Game;
 import com.watabou.utils.Bundle;
 import com.watabou.utils.FileUtils;
 
@@ -45,9 +46,18 @@ public class GamesInProgress {
 	
 	private static final String GAME_FOLDER = "game%d";
 	private static final String GAME_FILE	= "game.dat";
+	private static final String BACKUP_FILE = "game.bak";
 	private static final String DEPTH_FILE	= "depth%d.dat";
 	private static final String DEPTH_BRANCH_FILE	= "depth%d-branch%d.dat";
-	
+
+	public static String backupFile( int slot ){
+		return gameFolder(slot) + "/" + BACKUP_FILE;
+	}
+
+	public static boolean backupExists( int slot ){
+		return FileUtils.fileLength(backupFile(slot)) > 1;
+	}
+
 	public static boolean gameExists( int slot ){
 		return FileUtils.dirExists(gameFolder(slot))
 				&& FileUtils.fileLength(gameFile(slot)) > 1;
@@ -95,42 +105,60 @@ public class GamesInProgress {
 	}
 	
 	public static Info check( int slot ) {
-		
+
 		if (slotStates.containsKey( slot )) {
-			
+
 			return slotStates.get( slot );
-			
-		} else if (!gameExists( slot )) {
-			
+
+		} else if (!gameExists( slot ) && !backupExists( slot )) {
+
 			slotStates.put(slot, null);
 			return null;
-			
+
 		} else {
-			
-			Info info;
-			try {
-				
-				Bundle bundle = FileUtils.bundleFromFile(gameFile(slot));
 
-				if (bundle.getInt( "version" ) < ShatteredPixelDungeon.v2_3_2) {
-					info = null;
-				} else {
+			Info info = tryLoadInfoFromFile(slot, gameFile(slot), false);
 
-					info = new Info();
-					info.slot = slot;
-					Dungeon.preview(info, bundle);
-				}
-
-			} catch (IOException e) {
-				info = null;
-			} catch (Exception e){
-				ShatteredPixelDungeon.reportException( e );
-				info = null;
+			// Primary failed — try the backup so the slot still appears in the menu
+			if (info == null && backupExists(slot)) {
+				Game.reportException(new RuntimeException(
+						"[SaveRecovery] Primary save unreadable for slot " + slot + ", previewing from backup"));
+				info = tryLoadInfoFromFile(slot, backupFile(slot), true);
 			}
-			
+
 			slotStates.put( slot, info );
 			return info;
-			
+
+		}
+	}
+
+	private static Info tryLoadInfoFromFile( int slot, String filePath, boolean markCorrupted ) {
+		try {
+			Bundle bundle = FileUtils.bundleFromFile(filePath);
+
+			if (bundle.getInt( "version" ) < ShatteredPixelDungeon.v2_3_2) {
+				return null;
+			}
+
+			SaveValidator.ValidationResult result = SaveValidator.validateGameBundle(bundle);
+			if (!result.isValid) {
+				Game.reportException(new RuntimeException(
+						"[SaveValidator] Save preview failed validation for slot " + slot
+								+ " (" + filePath + "): " + result.issues));
+				// Still attempt to build Info from the bundle — partial data is better than none
+			}
+
+			Info info = new Info();
+			info.slot = slot;
+			info.corrupted = markCorrupted || !result.isValid;
+			Dungeon.preview(info, bundle);
+			return info;
+
+		} catch (IOException e) {
+			return null;
+		} catch (Exception e) {
+			ShatteredPixelDungeon.reportException( e );
+			return null;
 		}
 	}
 
@@ -196,9 +224,12 @@ public class GamesInProgress {
 		public HeroClass heroClass;
 		public HeroSubClass subClass;
 		public int armorTier;
-		
+
 		public int goldCollected;
 		public int maxDepth;
+
+		/** True when this preview was built from a backup because the primary save was corrupted. */
+		public boolean corrupted = false;
 	}
 	
 	public static final Comparator<GamesInProgress.Info> levelComparator = new Comparator<GamesInProgress.Info>() {

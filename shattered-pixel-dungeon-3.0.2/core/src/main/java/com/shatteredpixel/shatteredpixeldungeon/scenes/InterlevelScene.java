@@ -103,6 +103,7 @@ public class InterlevelScene extends PixelScene {
 	private static Thread thread;
 	private static Exception error = null;
 	private float waitingTime;
+	private boolean recoveryNoticeShown = false;
 
 	public static int lastRegion = -1;
 
@@ -557,6 +558,20 @@ public class InterlevelScene extends PixelScene {
 				} );
 				thread = null;
 				error = null;
+			} else if (Dungeon.saveLoadedFromBackup && !recoveryNoticeShown) {
+				// Runs on the main thread — safe to add UI elements here.
+				recoveryNoticeShown = true;
+				Dungeon.saveLoadedFromBackup = false;
+				add( new WndError(
+						"Save data corruption was detected.\n" +
+						"Your game has been recovered from a backup save." ) {
+					@Override
+					public void onBackPressed() {
+						super.onBackPressed();
+						phase = Phase.FADE_OUT;
+						timeLeft = fadeTime;
+					}
+				} );
 			} else if (thread != null && (int)waitingTime == 10){
 				waitingTime = 11f;
 				String s = "";
@@ -588,17 +603,20 @@ public class InterlevelScene extends PixelScene {
 	}
 
 	private void afterLoading(){
-		if (btnContinue != null){
-			btnContinue.visible = true;
-			float alpha = btnContinue.alpha();
-			btnContinue.enable(true);
-			btnContinue.alpha(alpha);
+		// If we recovered from a backup or have story text to show, stay in STATIC
+		// so the main-thread update loop can display the appropriate dialog/text.
+		if (btnContinue != null || Dungeon.saveLoadedFromBackup){
+			if (btnContinue != null) {
+				btnContinue.visible = true;
+				float alpha = btnContinue.alpha();
+				btnContinue.enable(true);
+				btnContinue.alpha(alpha);
+			}
 			phase = Phase.STATIC;
 		} else {
 			phase = Phase.FADE_OUT;
 			timeLeft = fadeTime;
 		}
-
 	}
 
 	private void descend() throws IOException {
